@@ -3,7 +3,9 @@
 A Nix flake framework for distributing, propagating, and sharing agent skills
 across teams and projects.
 
-Define skills once. Pull them into any project with a one-liner.
+Define skills once.
+Pull them into any project with a one-liner.
+Use anyone's distributed skills.
 
 ## Quick Start
 
@@ -15,16 +17,12 @@ acme-skills/
 └── skills/
     ├── docx/
     │   └── SKILL.md
-    ├── pdf/
-    │   ├── SKILL.md
-    │   └── script.sh
-    ├── acme-style-guide/
-    │   └── SKILL.md
-    └── acme-api-patterns/
-        └── SKILL.md
+    └── pdf/
+        ├── SKILL.md
+        └── script.sh
 ```
 
-The `flake.nix` is minimal:
+The `flake.nix` for defining and sharing your skills is minimal:
 
 ```nix
 {
@@ -45,8 +43,9 @@ The `flake.nix` is minimal:
 
 Add all `SKILL.md` files (and any supporting scripts,
 templates, etc.) into `skills/<name>/` and they're automatically discovered.
+Commit them to source control and push. They're now shared!
 
-### 2. Use company skills in a project
+### 2. Use shared skills in a project
 
 ```nix
 {
@@ -68,8 +67,6 @@ templates, etc.) into `skills/<name>/` and they're automatically discovered.
       devShells.${system}.default = pkgs.mkShell {
         name = "my-project";
 
-        packages = with pkgs; [ nodejs python3 ];
-
         shellHook = skills.mkSkillsHook {
           skills = [ "docx" "pdf" "acme-style-guide" ];
         };
@@ -78,7 +75,7 @@ templates, etc.) into `skills/<name>/` and they're automatically discovered.
 }
 ```
 
-### 3. Enter the shell
+### 3. Enter the dev shell
 
 ```bash
 $ nix develop
