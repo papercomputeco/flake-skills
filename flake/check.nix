@@ -162,12 +162,66 @@
           grep -q "testing" "$hook"       || { echo "FAIL: hook missing testing"; exit 1; }
           grep -q ".test-skills" "$hook"  || { echo "FAIL: hook missing custom targetDir"; exit 1; }
 
-          if grep -q "git/info/exclude" "$hook"; then
-            echo "FAIL: hook should not contain git exclude when gitExclude=false"
+          if grep -q ".gitignore" "$hook"; then
+            echo "FAIL: hook should not contain .gitignore when gitExclude=false"
             exit 1
           fi
 
           echo "PASS: shellHook generation"
+          mkdir -p $out && touch $out/passed
+        '';
+
+        # -------------------------------------------------------------
+        # Test 7: gitExclude writes per-skill .gitignore
+        # -------------------------------------------------------------
+        git-exclude = pkgs.runCommandLocal "check-git-exclude" {} ''
+          hook=${pkgs.writeText "hook-git.sh" (composedFlake.lib.mkSkillsHook {
+            skills = [ "coding-style" "testing" ];
+            targetDir = ".test-skills";
+            gitExclude = true;
+          })}
+
+          ${pkgs.bash}/bin/bash -n "$hook" \
+            || { echo "FAIL: generated shellHook has bash syntax errors"; exit 1; }
+
+          # The hook should write a .gitignore inside targetDir
+          grep -q ".gitignore" "$hook" \
+            || { echo "FAIL: hook should reference .gitignore when gitExclude=true"; exit 1; }
+
+          # It should NOT reference .git/info/exclude (old approach)
+          if grep -q "git/info/exclude" "$hook"; then
+            echo "FAIL: hook should not use .git/info/exclude"
+            exit 1
+          fi
+
+          # The hook should contain per-skill ignore entries
+          grep -q "/coding-style/" "$hook" \
+            || { echo "FAIL: hook should contain /coding-style/ gitignore entry"; exit 1; }
+          grep -q "/testing/" "$hook" \
+            || { echo "FAIL: hook should contain /testing/ gitignore entry"; exit 1; }
+
+          # Run the hook in a temporary directory and verify the .gitignore
+          workdir=$(mktemp -d)
+          (cd "$workdir" && ${pkgs.bash}/bin/bash "$hook" 2>/dev/null) || true
+          gitignore="$workdir/.test-skills/.gitignore"
+
+          test -f "$gitignore" \
+            || { echo "FAIL: .gitignore not created"; exit 1; }
+          grep -qxF '/coding-style/' "$gitignore" \
+            || { echo "FAIL: .gitignore missing /coding-style/"; exit 1; }
+          grep -qxF '/testing/' "$gitignore" \
+            || { echo "FAIL: .gitignore missing /testing/"; exit 1; }
+          grep -qxF '/.gitignore' "$gitignore" \
+            || { echo "FAIL: .gitignore should ignore itself"; exit 1; }
+
+          # Verify that non-selected skills are NOT in the .gitignore
+          if grep -qxF '/api-patterns/' "$gitignore"; then
+            echo "FAIL: .gitignore should not contain non-selected skill /api-patterns/"
+            exit 1
+          fi
+
+          rm -rf "$workdir"
+          echo "PASS: gitExclude writes per-skill .gitignore"
           mkdir -p $out && touch $out/passed
         '';
 

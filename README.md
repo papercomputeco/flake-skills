@@ -84,8 +84,10 @@ Syncing skills to .agents/skills/
 ```
 
 Your `.agents/skills/` directory now contains exactly the skills you listed.
-It's synced on every shell entry, stale skills are cleaned up, and the
-directory is added to `.git/info/exclude` automatically.
+It's synced on every shell entry, stale skills are cleaned up, and each
+flake-managed skill is added to `.agents/skills/.gitignore` automatically
+so that hand-written project-specific skills in the same directory remain
+tracked by git.
 
 ## Composite Skill Flakes
 
@@ -130,8 +132,8 @@ shellHook = skills.mkSkillsHook {
 };
 ```
 
-**Commit skills to git** — if you want them version-controlled in the
-consumer repo:
+**Commit flake-managed skills to git** — by default, each flake-managed skill
+gets an entry in `<targetDir>/.gitignore`. If you want them version-controlled:
 
 ```nix
 shellHook = skills.mkSkillsHook {
@@ -139,6 +141,9 @@ shellHook = skills.mkSkillsHook {
   gitExclude = false;
 };
 ```
+
+Note: project-specific skills you create by hand in the target directory are
+always tracked by git — only flake-managed skills are ignored.
 
 **Pin versions** — consumers lock via `flake.lock`. Update with:
 

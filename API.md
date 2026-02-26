@@ -11,7 +11,7 @@ Returns a `shellHook` string for use in `mkShell`.
 skills.mkSkillsHook {
   skills    = [ "docx" "pdf" ];   # optional, defaults to all available
   targetDir = ".agents/skills/";   # optional, where to write skill directories
-  gitExclude = true;              # optional, auto-add targetDir to .git/info/exclude
+  gitExclude = true;              # optional, write a .gitignore for flake-managed skills
 }
 ```
 
@@ -20,12 +20,13 @@ skills.mkSkillsHook {
 |--------------|--------------------|--------------------------------------------|
 | `skills`     | all available      | List of skill names to sync                |
 | `targetDir`  | `".agents/skills/"` | Where to write skill directories           |
-| `gitExclude` | `true`             | Auto-add targetDir to `.git/info/exclude`. You may choose to explicitly add these to source control or manually add the directory to `.gitignore`  |
+| `gitExclude` | `true`             | Write a `.gitignore` inside targetDir that ignores only flake-managed skills. Hand-written project-specific skills in the same directory remain tracked by git. Set to `false` to version-control flake-managed skills.  |
 
 
 On each shell entry it copies the selected skills into the target directory,
 removes any previously-synced skills that are no longer in the list, and
-optionally adds the target to git's exclude file.
+optionally writes a `.gitignore` inside the target directory that ignores
+only the flake-managed skill subdirectories (plus itself).
 
 ## `lib.mkSkillsPackage`
 
