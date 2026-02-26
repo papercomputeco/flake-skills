@@ -106,16 +106,20 @@ let
         unset _flake_skills_keep
       '';
 
+      # Build the content for targetDir/.gitignore: one entry per synced
+      # skill plus the .gitignore itself.  Written as a fully-managed
+      # file so it always reflects exactly the current set of
+      # flake-managed skills, while leaving any hand-written skills in
+      # the same directory tracked by git.
+      gitignoreContent = builtins.concatStringsSep "\\n" (
+        [ "# Managed by flake-skills -- do not edit" ]
+        ++ map (name: "/${name}/") selectedSkills
+        ++ [ "/.gitignore" ]
+      );
+
       gitExcludeBlock =
         if gitExclude then ''
-          if [ -d .git ]; then
-            mkdir -p .git/info
-            touch .git/info/exclude
-            if ! grep -qxF '${targetDir}/' .git/info/exclude 2>/dev/null; then
-              echo '${targetDir}/' >> .git/info/exclude
-              echo "  added ${targetDir}/ to .git/info/exclude"
-            fi
-          fi
+          printf '%b\n' '${gitignoreContent}' > "${targetDir}/.gitignore"
         '' else "";
 
       skillList = builtins.concatStringsSep ", " selectedSkills;
