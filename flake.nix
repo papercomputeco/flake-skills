@@ -5,6 +5,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
+    dagger.url = "github:dagger/nix";
+    dagger.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs@{ flake-parts, ... }:
@@ -22,6 +24,14 @@
 
       flake = {
         lib = import ./lib;
+      };
+
+      perSystem = { system, pkgs, ... }: {
+        devShells.default = pkgs.mkShell {
+          buildInputs = [
+            inputs.dagger.packages.${system}.dagger
+          ];
+        };
       };
     };
 }
