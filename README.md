@@ -84,10 +84,16 @@ Syncing skills to .agents/skills/
 ```
 
 Your `.agents/skills/` directory now contains exactly the skills you listed.
-It's synced on every shell entry, stale skills are cleaned up, and each
-flake-managed skill is added to `.agents/skills/.gitignore` automatically
-so that hand-written project-specific skills in the same directory remain
-tracked by git.
+It's synced on every shell entry, and stale skills are cleaned up.
+
+By default, flake-managed skills are **not** git-ignored. Commit the synced
+skill directories along with `flake.lock` so agents that skip git-ignored
+files (including many common coding agents) can read them. When upstream
+skills change, run `nix flake update <skills-input>`, enter the dev shell to
+resync, and commit both the updated skills and lock file.
+
+If a previous version created `.agents/skills/.gitignore`, the default hook
+removes that managed file so the synced skills become visible to git.
 
 ## Composite Skill Flakes
 
@@ -132,18 +138,18 @@ shellHook = skills.mkSkillsHook {
 };
 ```
 
-**Commit flake-managed skills to git** — by default, each flake-managed skill
-gets an entry in `<targetDir>/.gitignore`. If you want them version-controlled:
+**Ignore flake-managed skills** — synced skills are version-controllable by
+default. If you intentionally do not want to commit them, opt in to writing a
+managed `<targetDir>/.gitignore`:
 
 ```nix
 shellHook = skills.mkSkillsHook {
   skills = [ "docx" ];
-  gitExclude = false;
+  gitExclude = true;
 };
 ```
 
-Note: project-specific skills you create by hand in the target directory are
-always tracked by git — only flake-managed skills are ignored.
+Use this only if your agents still read git-ignored skill files.
 
 **Pin versions** — consumers lock via `flake.lock`. Update with:
 

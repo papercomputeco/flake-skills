@@ -61,12 +61,15 @@ let
   #
   # Returns a shellHook string that syncs selected skills into a local directory.
   # Portable across macOS (BSD) and Linux (GNU).
+  # By default synced skills are left trackable so agents that skip git-ignored
+  # files can read them; set gitExclude = true to ignore flake-managed skills.
+  # When false, any previously generated flake-skills .gitignore is removed.
   # ---------------------------------------------------------------------------
   mkSkillsHook = allSkillSources: allSkillNames:
     {
       skills ? allSkillNames,
       targetDir ? ".agents/skills",
-      gitExclude ? true,
+      gitExclude ? false,
     }:
     let
       selectedSkills = validateSkills allSkillNames skills;
@@ -106,7 +109,7 @@ let
         unset _flake_skills_keep
       '';
 
-      # Build the content for targetDir/.gitignore: one entry per synced
+      # Build the optional content for targetDir/.gitignore: one entry per synced
       # skill plus the .gitignore itself.  Written as a fully-managed
       # file so it always reflects exactly the current set of
       # flake-managed skills, while leaving any hand-written skills in
@@ -120,7 +123,12 @@ let
       gitExcludeBlock =
         if gitExclude then ''
           printf '%b\n' '${gitignoreContent}' > "${targetDir}/.gitignore"
-        '' else "";
+        '' else ''
+          if [ -f "${targetDir}/.gitignore" ] && \
+             [ "$(head -n 1 "${targetDir}/.gitignore" 2>/dev/null)" = "# Managed by flake-skills -- do not edit" ]; then
+            rm -f "${targetDir}/.gitignore"
+          fi
+        '';
 
       skillList = builtins.concatStringsSep ", " selectedSkills;
 
