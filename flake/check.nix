@@ -152,7 +152,6 @@
           hook=${pkgs.writeText "hook.sh" (composedFlake.lib.mkSkillsHook {
             skills = [ "coding-style" "testing" ];
             targetDir = ".test-skills";
-            gitExclude = false;
           })}
 
           ${pkgs.bash}/bin/bash -n "$hook" \
@@ -162,10 +161,19 @@
           grep -q "testing" "$hook"       || { echo "FAIL: hook missing testing"; exit 1; }
           grep -q ".test-skills" "$hook"  || { echo "FAIL: hook missing custom targetDir"; exit 1; }
 
-          if grep -q ".gitignore" "$hook"; then
-            echo "FAIL: hook should not contain .gitignore when gitExclude=false"
-            exit 1
-          fi
+          # Default gitExclude=false should not leave flake-managed skills ignored.
+          workdir=$(mktemp -d)
+          mkdir -p "$workdir/.test-skills"
+          printf '%s\n' '# Managed by flake-skills -- do not edit' '/coding-style/' > "$workdir/.test-skills/.gitignore"
+          (cd "$workdir" && ${pkgs.bash}/bin/bash "$hook" 2>/dev/null)
+
+          test ! -f "$workdir/.test-skills/.gitignore" \
+            || { echo "FAIL: default hook should remove managed .gitignore"; exit 1; }
+          test -f "$workdir/.test-skills/coding-style/SKILL.md" \
+            || { echo "FAIL: default hook should sync coding-style"; exit 1; }
+          test -f "$workdir/.test-skills/testing/SKILL.md" \
+            || { echo "FAIL: default hook should sync testing"; exit 1; }
+          rm -rf "$workdir"
 
           echo "PASS: shellHook generation"
           mkdir -p $out && touch $out/passed
@@ -202,7 +210,7 @@
 
           # Run the hook in a temporary directory and verify the .gitignore
           workdir=$(mktemp -d)
-          (cd "$workdir" && ${pkgs.bash}/bin/bash "$hook" 2>/dev/null) || true
+          (cd "$workdir" && ${pkgs.bash}/bin/bash "$hook" 2>/dev/null)
           gitignore="$workdir/.test-skills/.gitignore"
 
           test -f "$gitignore" \
